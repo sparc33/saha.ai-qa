@@ -1,0 +1,23 @@
+{
+  "name": "saha-ai-qa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QA automation framework for the AI Clinical Intake & Triage Assistant. Dedicated satellite repo, generated/maintained by the QA agent fleet at https://github.com/sparc33/ARC-QA (local: C:\\ARC QA) — not colocated with the portal or backend app repos. See README.md.",
+  "scripts": {
+    "test": "playwright test",
+    "test:patient-chat": "playwright test --project=patient-chat-ui",
+    "test:clinician-dashboard": "playwright test --project=clinician-dashboard-ui",
+    "test:api": "playwright test --project=conversation-api",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.7.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.6.0"
+  }
+}

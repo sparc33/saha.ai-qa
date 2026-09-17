@@ -1,0 +1,15 @@
+{
+  "id": "TEST-000142",
+  "synthetic": true,
+  "name": "TEST_Jordan Ellery",
+  "medicalRecordNumber": "TEST-000142",
+  "phone": "555-0148",
+  "email": "jordan.ellery@example.com",
+  "address": "123 Test St, Testville, ZZ 00000",
+  "lastVisitDate": "2026-06-02",
+  "priorVisitHistory": {
+    "allergies": ["penicillin"],
+    "chronicConditions": ["type 2 diabetes"],
+    "medications": ["metformin 500mg"]
+  }
+}

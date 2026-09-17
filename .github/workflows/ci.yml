@@ -1,0 +1,23 @@
+name: CI
+
+# Deliberately minimal: no real app is deployed yet, so this only guards the framework
+# itself (install + typecheck) rather than pretending to run tests against nothing.
+# Extend the "test" job to actually run `npx playwright test` once real, non-production
+# base URLs exist and are wired in as repo secrets — do not add that step speculatively.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run typecheck

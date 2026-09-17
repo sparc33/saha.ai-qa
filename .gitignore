@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+
+# Run artifacts — regenerated every run, not meant to be committed
+docs/test-results/
+playwright-report/
+test-results/
+*.log
