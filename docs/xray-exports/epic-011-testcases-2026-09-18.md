@@ -2,9 +2,22 @@
 
 ## Metadata
 
-- Source: Confluence page "EPIC-011 — Conversational AI Patient Intake" (id `5885919637`), Status: **Proposed** — not a Jira ticket, no `VAN-XX` key exists for this epic or any of its stories as of 2026-09-18
-- Requirements source type: `confluence-page` (per `sdlcIntegration.requirementsSourcePreference` in `qa-fleet.config.json`) — used here as the *sole* source, not a fallback for a ticket that has one, since no Jira ticket exists at all for this epic
+- Source: Confluence page "EPIC-011 — Conversational AI Patient Intake" (id `5885919637`), Status: **Proposed** — the epic itself still has no Jira ticket as of 2026-09-18
+- Requirements source type: `confluence-page` (per `sdlcIntegration.requirementsSourcePreference` in `qa-fleet.config.json`) — used here as the *sole* source, not a fallback for a ticket that has one, since no Jira epic ticket exists
 - Preceded by a full Story Testability Reviewer pass (methodology in `story-testability-reviewer.agent.md`, applied directly to this Confluence content) — see `docs/testability-reviews/epic-011-testability-review-2026-09-18.md`
+- **Real Jira `Test` issues created 2026-09-18** via the plain-REST fallback documented in `xray-csv-importer.agent.md` (`xray.integrationMode` is `local-only`, so Xray's own create-test API was not used) — one per story, each with its scenarios pasted into the description and its CSV slice attached:
+
+  | Story | Jira Key |
+  |---|---|
+  | US-037 | [VAN-51](https://experionglobal.atlassian.net/browse/VAN-51) |
+  | US-038 | [VAN-52](https://experionglobal.atlassian.net/browse/VAN-52) |
+  | US-039 | [VAN-53](https://experionglobal.atlassian.net/browse/VAN-53) |
+  | US-040 | [VAN-54](https://experionglobal.atlassian.net/browse/VAN-54) |
+  | US-041 | [VAN-55](https://experionglobal.atlassian.net/browse/VAN-55) |
+  | US-042 | [VAN-56](https://experionglobal.atlassian.net/browse/VAN-56) |
+  | US-043 | [VAN-57](https://experionglobal.atlassian.net/browse/VAN-57) |
+
+  These are real, visible Jira issues but do not have Xray's own rich Test Type/manual-steps structure populated — only standard fields (`summary`, `description`) were set. Don't assume they're structurally equivalent to a `full`-mode Xray import if that's ever built later.
 - Team: n/a (no team split for this project)
 - Components: VAN (placeholder)
 - Labels: `ManualTC` + `surface:patient-chat-ui` per row

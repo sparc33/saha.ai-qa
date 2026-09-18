@@ -21,6 +21,11 @@ export class OtpLoginPage extends BasePage {
   private readonly verifyOtpButton = this.page.getByRole('button', { name: /verify|submit|confirm/i }); // TODO: placeholder selector — not verified against a running app
   private readonly resendOtpButton = this.page.getByRole('button', { name: /resend/i }); // TODO: placeholder selector — not verified against a running app
   private readonly errorMessage = this.page.getByRole('alert'); // TODO: placeholder selector — not verified against a running app
+  private readonly identifierFormatError = this.page.getByTestId('identifier-format-error'); // TODO: placeholder selector — EPIC-011 AC-038.1
+  private readonly maskedDestination = this.page.getByTestId('otp-masked-destination'); // TODO: placeholder selector — EPIC-011 AC-038.2
+  private readonly resendCountdown = this.page.getByTestId('otp-resend-countdown'); // TODO: placeholder selector — EPIC-011 AC-038.2, duration unstated (see testability review)
+  private readonly verifiedState = this.page.getByTestId('otp-verified-state'); // TODO: placeholder selector — EPIC-011 AC-038.3
+  private readonly lockoutMessage = this.page.getByTestId('otp-lockout-message'); // TODO: placeholder selector — EPIC-011 AC-038.EX.1
 
   async requestOtp(identifier: string): Promise<void> {
     await this.goto('/login');
@@ -40,5 +45,34 @@ export class OtpLoginPage extends BasePage {
 
   async getErrorMessage(): Promise<string | null> {
     return this.errorMessage.textContent();
+  }
+
+  /** EPIC-011 AC-038.1 — format validation error on an invalid MRN/phone identifier. */
+  async getIdentifierFormatError(): Promise<string | null> {
+    return this.identifierFormatError.textContent();
+  }
+
+  async isMaskedDestinationVisible(): Promise<boolean> {
+    return this.maskedDestination.isVisible();
+  }
+
+  /** AC-038.2 — MISSING DATA per the testability review: exact countdown duration unstated.
+   * This only checks the countdown widget renders, not a specific duration value. */
+  async isResendCountdownVisible(): Promise<boolean> {
+    return this.resendCountdown.isVisible();
+  }
+
+  async isVerifiedStateVisible(): Promise<boolean> {
+    return this.verifiedState.isVisible();
+  }
+
+  /** AC-038.EX.1 — locks out after 5 consecutive failed attempts (the one concrete threshold
+   * in this story) and directs the patient to clinic staff. */
+  async isLockedOut(): Promise<boolean> {
+    return this.lockoutMessage.isVisible();
+  }
+
+  async getLockoutMessage(): Promise<string | null> {
+    return this.lockoutMessage.textContent();
   }
 }
