@@ -2,7 +2,7 @@
 
 QA automation framework for the **AI Clinical Intake & Triage Assistant** (B2B, clinic-facing) — a conversational pre-visit intake agent with red-flag escalation and clinician-facing triage.
 
-This is a **dedicated satellite repo**, not colocated with the portal or backend app repos. It's generated and maintained by a separate QA agent fleet (`qa-fleet.config.json`, `*.agent.md` specs — local at `C:\ARC QA`), invoked by a developer typing `QA <ticket-id>`. See that repo's `CLAUDE.md` / `INTEGRATION.md` for the full pipeline this framework is a downstream target of. This README covers only what's local to running/maintaining the framework itself.
+This is a **dedicated satellite repo**, not colocated with the portal or backend app repos. It's generated and maintained by a separate, project-agnostic QA agent fleet (`*.agent.md` specs — local at `C:\ARC QA`), invoked by a developer typing `QA <ticket-id>` from within this repo. The fleet itself holds no project-specific config at all — `qa-fleet.config.json` at this repo's root (below) is the sole source of truth for this project; every agent resolves it via a working-directory convention (workspace root, search upward if not found), never from the fleet repo. See the fleet repo's `CLAUDE.md` / `INTEGRATION.md` for the full pipeline this framework is a downstream target of. This README covers only what's local to running/maintaining the framework itself.
 
 ## Structure
 
@@ -57,7 +57,7 @@ npm run report                  # open the last HTML report
 
 ## `docs/test-data/patients/` — synthetic data only, no exceptions
 
-Every fixture patient in this directory must be **entirely fabricated**, never copied, derived, or anonymized from a real patient record, and never sourced from a "realistic example" offered as something to imitate. Concrete conventions every generated record must follow (see the QA fleet's `qa-fleet.config.json` -> `testData.syntheticDataGenerationRules` for the authoritative version):
+Every fixture patient in this directory must be **entirely fabricated**, never copied, derived, or anonymized from a real patient record, and never sourced from a "realistic example" offered as something to imitate. Concrete conventions every generated record must follow (see this repo's own `qa-fleet.config.json` -> `testData.syntheticDataGenerationRules` for the authoritative version):
 
 - Names prefixed `TEST_` (e.g. `TEST_Jordan Ellery`)
 - Phone numbers only in the reserved fictional range `555-01XX`

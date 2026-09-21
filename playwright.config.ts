@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 // Multi-project config for the AI Clinical Intake & Triage Assistant — one repo,
-// three surfaces (mirrors qa-fleet.config.json -> testSurfaces in the QA fleet repo).
+// three surfaces (mirrors this repo's own qa-fleet.config.json -> testSurfaces).
 // Base URLs come only from env vars — see .env.example. Never hard-code a real host
 // here; cross-check any value against the fleet's browserAutomation allow-list before use.
 export default defineConfig({

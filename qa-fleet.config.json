@@ -1,0 +1,231 @@
+{
+  "$schema": "internal://qa-fleet-config/v2",
+  "configVersion": "2.0",
+  "_comment": "Product: AI Clinical Intake & Triage Assistant (B2B, clinic-facing) — a conversational pre-visit intake agent with red-flag escalation and clinician-facing triage. This file is this satellite repo's own standalone QA fleet config — the fleet repo (C:ARC QA) never holds a copy of it. Many fields below are null/TBD because the BA agent's requirements and the dev agents' build haven't landed yet (as of 2026-09-17) — every agent in this fleet already asks once and offers to write the value back when a key it needs is null/absent; do not fill these in with a guess.",
+  "jira": {
+    "baseUrl": "https://experionglobal.atlassian.net",
+    "projectKey": "VAN",
+    "cloudSiteHint": "experionglobal.atlassian.net",
+    "_comment": "Set 2026-09-17. Note: a different Atlassian site than the PRD's Confluence link (vantxcelerate.atlassian.net) — confirmed intentional, not assumed; Jira/ticket work and the PRD/Confluence space live on separate tenants for this project."
+  },
+  "confluence": {
+    "spaceId": null,
+    "spaceKey": null,
+    "automationRunbookFolderId": null
+  },
+  "xray": {
+    "cloudBaseUrl": "https://xray.cloud.getxray.app",
+    "integrationMode": "local-only",
+    "integrationModeNote": "Default 'local-only' as of 2026-09-17 (see INTEGRATION.md §6) — the actual Xray API integration (create tests/steps, JUnit import, step-level run-data fetch) has never been built or verified live, unlike Jira/Confluence. Rather than block the pipeline on that, 'local-only' mode: skips creating Xray issues at import time (the CSV design already produces is still saved, importable by hand later via Xray's own UI); runs tests and computes results/risk-gated coverage from local JUnit output correlated by exact title against the local test plan, never touching Xray; and has xray-execution-runbook-publisher.agent.md save a local report instead of a Confluence publish that would depend on Xray execution data. Switch to 'full' once the Xray API work (see xray-csv-importer.agent.md's and xray-execution-runbook-publisher.agent.md's own open-gap notes) is actually built and verified — not before, and not by assuming it'll probably work.",
+    "credentialSource": {
+      "type": "env",
+      "envVars": {
+        "clientId": "XRAY_CLIENT_ID",
+        "clientSecret": "XRAY_CLIENT_SECRET",
+        "jiraEmail": "JIRA_EMAIL",
+        "jiraApiToken": "JIRA_API_TOKEN"
+      },
+      "_comment": "Chosen 2026-09-17 over the prior project's DynamoDB mechanism — no AWS dependency for this project. Agents read these env var NAMES from here and fetch the VALUES from the environment only at the moment they're needed (PHASE APPLY, never earlier, never cached) — values are never written to this file or echoed anywhere. Set these in the local shell or a .env file before running xray-csv-importer.agent.md / test-execution-runner.agent.md / xray-execution-runbook-publisher.agent.md.",
+      "stillOpenNote": "xray-csv-importer.agent.md's underlying import mechanism (a Node.js script at a hard-coded path in the OLD project's c:\\playwright-automation repo) doesn't exist for this project — updating this agent's credential-source section to env vars does NOT by itself give it a working import path against saha.ai-qa. See that agent's own note for what still needs deciding: write an equivalent script into saha.ai-qa, or have the agent call Jira/Xray APIs directly without a separate script file."
+    }
+  },
+  "teams": {
+    "_comment": "Intentionally empty. Per AGENT-TEMPLATE.md §4, an agent whose CONFIG resolves `teams.*` treats an empty block as 'this project has no team split' — it asks for a single free-text Components value / uses the default Xray credential fields instead of a per-team mapping, rather than blocking on a team name that doesn't apply here. Populate this only if the org later splits ownership by team."
+  },
+  "paths": {
+    "playwrightFrameworkRoot": null,
+    "playwrightFrameworkRootNote": "Left null on purpose even though a framework now exists — see frameworks.saha-ai-qa below. This field's semantics are 'default parent directory to SUGGEST scaffolding a NEW framework into' (playwright-ui-framework-builder.agent.md CONFIG); saha.ai-qa is an already-scaffolded, registered framework, which is exactly what the frameworks.* registry (not this field) is for. Setting both would be ambiguous about which one governs.",
+    "xrayExportsDir": "docs/xray-exports",
+    "apiTestPlansDir": "docs/api-test-plans",
+    "executionPlanDir": "docs/ai_docs/plans",
+    "executionPlanFilePattern": "execution-plan-{ticketId}.md",
+    "guardReportDir": "docs/ai_docs/security",
+    "guardReportFilePattern": "guard-report-{ticketId}.md"
+  },
+  "testSurfaces": {
+    "_comment": "Generic convention (see AGENT-TEMPLATE.md §4): the distinct things QA can act against for this product. jira-confluence-to-xray-csv-agent.md tags every generated Xray test case's Labels column with `surface:<key>`; automate/execute-stage agents route by that tag instead of assuming one single UI.",
+    "patient-chat-ui": {
+      "type": "browser",
+      "description": "Patient-facing conversational intake widget — waiting-room kiosk/tablet, or a pre-visit link. Free-text symptom description plus natural clinical follow-up Q&A (onset, duration, severity, associated symptoms). Confirmed by the PRD: an isolated surface with no path to the clinician dashboard (TS-033), no clinician-level auth (BRULE-052). CORRECTED 2026-09-17 from a real EPIC-009 (VAN-27/28/29/30/31) run: patients DO go through an OTP identity-verification step first (MR number/phone number + OTP) before reaching the conversational surface — BRULE-052's 'no clinician-level auth' does not mean 'no auth at all'. Also surfaced from EPIC-001 (VAN-1/7-13): the natural-language symptom description flow (US-002) has no stated connection to clinical-red-flag-escalation in its own AC — the tie-in exists in this fleet's riskGatedCategories but isn't yet reflected in the story itself.",
+      "environmentKey": "qa",
+      "baseUrlEnvVar": "PATIENT_CHAT_BASE_URL",
+      "playwrightProject": "patient-chat-ui",
+      "authRequired": true,
+      "authMechanism": "OTP (MR number or registered phone number, then a one-time password) — NOT the username/password model. Exact bounds (OTP expiry, retry limit, resend cooldown, lockout threshold) are undefined as of 2026-09-17 — see the testability review comments on VAN-28 through VAN-31.",
+      "authRequiredNote": "Changed from false to true 2026-09-17 after actually running the pipeline against EPIC-009 — a real correction, not a redesign; the original testSurfaces split (patient vs. clinician isolation) was still right, only the 'no auth at all' assumption for this specific surface was wrong."
+    },
+    "clinician-dashboard-ui": {
+      "type": "browser",
+      "description": "Clinician-facing queue of patients sorted by urgency, opening into the full structured note. Confirmed by the PRD: authenticated-only — every dashboard route without auth must reject and redirect to login (AC-021.2 / INT-009 Authentication Service) — and the queue updates via a real-time push channel (INT-008), not a page reload, so a test asserting a new arrival appears must wait for the push update rather than navigating away and back.",
+      "environmentKey": "qa",
+      "baseUrlEnvVar": "CLINICIAN_DASHBOARD_BASE_URL",
+      "playwrightProject": "clinician-dashboard-ui",
+      "authRequired": true,
+      "authCredentialEnvVars": [
+        "CLINICIAN_TEST_USERNAME",
+        "CLINICIAN_TEST_PASSWORD"
+      ],
+      "authCredentialNote": "Env-var names only, per ui-selector-discovery.agent.md / test-execution-runner.agent.md's existing 'login credentials' input convention — never a real value in this file."
+    },
+    "conversation-api": {
+      "type": "api",
+      "description": "Fronted by the PRD's 'AI Intake Orchestrator' — the central coordinator managing session state and routing across several internal integration points QA observes through this surface rather than calling directly: INT-004 Red-Flag Detection ('safety-critical, no degraded mode permitted' — NFR-014; = clinical-red-flag-escalation below), INT-005 Triage Rubric/Scoring Engine (= decision-support-not-diagnosis below), INT-003 Patient Identity Matching (returning-patient recall), and a background note-generation process (the 4-section structured note). INT-001 (the underlying LLM platform — Azure OpenAI/Bedrock/Anthropic candidates), INT-002/INT-006 (data store / hosting infra), and INT-011/INT-012 (Post-MVP) are vendor/infra/out-of-scope concerns this fleet doesn't test directly — kept as ONE testSurfaces entry, not split into one per INT-xxx, since the Orchestrator is the actual thing QA calls.",
+      "baseUrlEnvVar": "CONVERSATION_API_BASE_URL",
+      "specLocation": null,
+      "playwrightProject": "conversation-api",
+      "_comment": "specLocation still null, and now CONFIRMED absent rather than just unconfirmed: the PRD names no OpenAPI/Swagger convention or spec location anywhere — the only API standard mentioned at all is HL7/FHIR, and only for the Post-MVP EHR integration layer (INT-012). api-test-case-builder.agent.md has nothing to run against for this surface until engineering commits to one — see INTEGRATION.md §6."
+    }
+  },
+  "browserAutomation": {
+    "_comment": "Shared environment-safety allow-list for every browser-type testSurfaces entry (and the host any api-type entry's baseUrlEnvVar resolves to) — see ui-selector-discovery.agent.md / test-execution-runner.agent.md PHASE 0.5. productionHostPatterns is checked first and always wins. Entries below are generic placeholders only (no real app hosts exist yet) — the allow-list is a positive match, so any host that isn't localhost/127.0.0.1/*.qa.* still fails the gate and requires an explicit CONFIRM PRODUCTION/OVERRIDE, even with productionHostPatterns empty. Replace with real QA/staging hosts once the dev team stands up an environment; never guess a plausible-looking domain.",
+    "environments": {
+      "qa": {
+        "allowedHostPatterns": [
+          "localhost",
+          "127.0.0.1",
+          "*.qa.*"
+        ]
+      },
+      "staging": {
+        "allowedHostPatterns": [
+          "*.staging.*",
+          "*.stg.*"
+        ]
+      }
+    },
+    "productionHostPatterns": [],
+    "selectorMapDir": "docs/ui-selectors",
+    "testResultsDir": "docs/test-results"
+  },
+  "frameworks": {
+    "_comment": "Standing, pre-existing automation framework(s) the fleet runs against — see AGENT-TEMPLATE.md §4.1 / qa-pipeline-conductor.agent.md PHASE 0 step d3 for how a ticket resolves to one of these instead of assuming co-location with repo.path.",
+    "saha-ai-qa": {
+      "repoUrl": "https://github.com/sparc33/saha.ai-qa.git",
+      "path": "C:\\saha.ai-qa",
+      "projectKeys": [],
+      "projectKeysNote": "Empty because jira.projectKey isn't known yet (still null above). This is currently the fleet's ONLY registered framework for the ONLY active project — PHASE 0 step d3 should treat a registered framework with empty projectKeys as the default match when it's the sole entry, rather than requiring an exact project-key match that can't exist yet. Fill in projectKeys once jira.projectKey is confirmed, for correctness once a second framework or project is ever registered.",
+      "playwrightMultiProject": true,
+      "playwrightMultiProjectNote": "Unlike WISR (one flat suite), this framework has three named Playwright projects in its own playwright.config.ts — patient-chat-ui, clinician-dashboard-ui, conversation-api — matching testSurfaces.*.playwrightProject. test-execution-runner.agent.md should pass --project=<name> per surface, not run the whole suite undifferentiated.",
+      "xrayKeyMapFile": null,
+      "titleTicketRegex": null,
+      "xrayKeyMapFileNote": "Neither needed: this fleet's own generated tests (Playwright UI Framework Builder / API Test Case Builder) always set title = source test plan's Summary verbatim, so exact-title matching (test-execution-runner.agent.md PHASE 1's default, third strategy) always applies. These would only matter for hand-authored tests added outside this fleet's generation flow.",
+      "knownHosts": null,
+      "knownHostsNote": "Not applicable — unlike WISR's hardcoded portalConfigs, this framework takes base URLs dynamically via env vars (PATIENT_CHAT_BASE_URL / CLINICIAN_DASHBOARD_BASE_URL / CONVERSATION_API_BASE_URL, see .env.example in the repo). test-execution-runner.agent.md PHASE 0.5 should use the dynamic base-URL check (against browserAutomation.environments.<env>.allowedHostPatterns), not the static knownHosts path.",
+      "requiredEnvVars": [],
+      "requiredEnvVarsNote": "None required just to enumerate tests (npx playwright test --list) — unlike WISR's loginHelper.ts, this scaffold has no eager credential loader. The base-URL env vars above are needed to actually run against a real environment, but PHASE 0.6's presence-only check isn't a precondition for --list the way it was for WISR.",
+      "headlessEnvVar": null,
+      "headlessNote": "Not a gap, unlike WISR's null: playwright.config.ts here doesn't hardcode headed mode at all, so Playwright's own default (headless) applies with no toggle needed. Safe to run from a non-interactive terminal as-is.",
+      "scaffoldedBy": "QA fleet, 2026-09-17 — package.json, playwright.config.ts (3 projects), tsconfig.json, .env.example, .gitignore, README.md, and the full folder layout are in place; npm install + tsc --noEmit both pass. No test specs exist yet — those land once a real ticket runs through design/automate."
+    }
+  },
+  "testData": {
+    "_comment": "Generic convention (see AGENT-TEMPLATE.md §4.1): fixture data QA owns for scenario types that need seeded state — here, returning-patient context recall (allergies, chronic conditions, medications from a prior visit). Referenced by jira-confluence-to-xray-csv-agent.md when authoring returning-patient scenarios, and by test-execution-runner.agent.md when a scenario needs a specific seeded patient. No agent in this fleet generates this content today (jira-confluence-to-xray-csv-agent.md PHASE 1E only flags the gap, deliberately does not fabricate patient details) — the rules below are prospective, binding on whichever human or future agent first populates fixturesDir.",
+    "fixturesDir": "docs/test-data/patients",
+    "syntheticDataOnly": true,
+    "syntheticDataPolicy": "Every fixture patient must be entirely fabricated by QA/dev — never copied, derived, or anonymized from a real patient record, and never sourced from a 'realistic example' someone offers to imitate. No agent in this fleet has authorization to source or accept real PHI as test data, even 'de-identified' data; ask the user to confirm a roster entry is synthetic before using it if that's ever ambiguous.",
+    "prdAlignmentNote": "CORRECTED 2026-09-17: an earlier version of this note claimed the PRD allows 'synthetic OR de-identified' data (looser than this fleet's synthetic-only policy) — that was wrong. Reading the actual Confluence business-rule text (Domain 7 — HIPAA Compliance, page 5886083073), BRULE-064 is CONFIRMED and reads: 'MVP and demo environments must use synthetic patient data only. Real PHI must not be used in non-production environments.' No de-identified-data allowance exists in the source text at all. This fleet's policy above is therefore fully aligned with the PRD, not stricter than it — the prior 'unreconciled gap' claim is retracted. Separately: INT-007 names Synthea (a real open-source synthetic patient generator) as a candidate data source — if adopted, Synthea's own output (realistic-but-fake FHIR patient bundles) still needs this fleet's naming/marker conventions (TEST_ prefix, synthetic:true, etc., see syntheticDataGenerationRules below) layered on top before use as a fixture here; don't assume its output already satisfies those rules as-is.",
+    "syntheticDataGenerationRules": {
+      "_comment": "Concrete, checkable conventions per AGENT-TEMPLATE.md §4.1 — every generated patient record must satisfy all of these, unmistakably, even out of context.",
+      "names": "Drawn from a fictional-name convention, never a real identifiable individual (public figures included) and never derived from one. Prefix with `TEST_` (e.g. `TEST_Jordan Ellery`) so it can't be mistaken for a real chart even in a screenshot or log line.",
+      "phone": "Use only the reserved fictional exchange 555-01XX (e.g. 555-0148) — never a real, dialable number.",
+      "email": "Use only @example.com / @example.org / @example.test domains.",
+      "address": "A clearly placeholder address that doesn't resolve to a real location (e.g. '123 Test St, Testville, ZZ 00000') — never a real street address, even a randomly-permuted one.",
+      "medicalRecordNumberOrInsuranceId": "Prefix with TEST- (e.g. TEST-000142) — never a value shaped like a real MRN/insurance ID range this org or a payer actually issues.",
+      "clinicalContent": "Allergies/conditions/medications may be realistic drug/condition *names* (needed for the scenario to be meaningful) but must never be paired with a real person's actual history — the pairing itself is what's fabricated, not just the identity fields.",
+      "recordMarker": "Every record carries an explicit \"synthetic\": true field, in addition to the naming/format conventions above — belt and suspenders, so a record is unmistakable even if a consumer only reads that one field.",
+      "reviewGate": "A human must explicitly approve the full generated roster content before it's written to fixturesDir — treat this as its own PLAN -> GATE -> APPLY preview per AGENT-TEMPLATE.md §5, specifically to catch output that reads as too real, not merely because it's a multi-file write."
+    }
+  },
+  "riskGatedCategories": [
+    {
+      "key": "clinical-red-flag-escalation",
+      "description": "Every configured emergency red-flag symptom (clinicalSafety.redFlagSymptoms) must have at least one Xray test verifying the assistant triggers an immediate escalate-now flag instead of continuing routine intake, and that test must pass. Unlike an ordinary failing test, a filed/waived defect does NOT rescue a failure here — patient-safety escalation logic cannot be averaged away against a pass-rate threshold.",
+      "requiredCoverageOf": "clinicalSafety.redFlagSymptoms",
+      "scenarioTemplate": "Patient reports {item} during intake — assistant immediately escalates instead of continuing routine intake",
+      "onMissingOrFailing": "BLOCKED"
+    },
+    {
+      "key": "decision-support-not-diagnosis",
+      "description": "This product is positioned as clinician decision support, not a diagnostic device — a framing that matters beyond marketing copy (see FDA's Clinical Decision Support software guidance: software that displays a recommendation with its basis, for a clinician to independently review, sits outside that guidance's definition of a regulated device in a way a tool that asserts a diagnosis would not). Every item in clinicalSafety.decisionSupportRequirements must have at least one passing Xray test verifying the product actually behaves that way in the UI/output, not just in prose intent. A filed/waived defect does NOT rescue a failure here, same as the red-flag category above.",
+      "requiredCoverageOf": "clinicalSafety.decisionSupportRequirements",
+      "scenarioTemplate": "Verify that {item}",
+      "onMissingOrFailing": "BLOCKED"
+    },
+    {
+      "key": "tenant-isolation",
+      "description": "Sourced from a real PRD business rule, not this fleet's own judgment call: 'All patient and session data must be strictly scoped to clinic identifier — no cross-clinic data access under any condition' (NFR-011 / DE-017 — Clinic (Tenant)). Every item in dataSecurity.tenantIsolationRequirements must have at least one passing Xray test. A filed/waived defect does NOT rescue a failure here — cross-tenant PHI leakage in a multi-tenant healthcare product is exactly the kind of failure that can't be averaged away against a pass-rate threshold.",
+      "requiredCoverageOf": "dataSecurity.tenantIsolationRequirements",
+      "scenarioTemplate": "Verify that {item}",
+      "onMissingOrFailing": "BLOCKED"
+    },
+    {
+      "key": "patient-record-matching",
+      "description": "Sourced from a real testability-review finding on VAN-29 (2026-09-17), not this fleet's own judgment call in advance — patient identity matching (MR number/phone number) must be exact, never fuzzy, or one patient's intake data can attach to a different patient's chart. Every item in dataSecurity.patientRecordMatchingRequirements must have at least one passing Xray test. A filed/waived defect does NOT rescue a failure here — cross-patient PHI mixing is a clinical-safety incident, not an ordinary bug.",
+      "requiredCoverageOf": "dataSecurity.patientRecordMatchingRequirements",
+      "scenarioTemplate": "Verify that {item}",
+      "onMissingOrFailing": "BLOCKED"
+    }
+  ],
+  "clinicalSafety": {
+    "_comment": "Product-specific — NOT a generic AGENT-TEMPLATE concept (a future non-healthcare project would leave this block out entirely). RECONCILED 2026-09-17 against the real PRD (Confluence 'Requirements and Backlog Overview', page 5886083073), superseding the earlier draft-from-pitch version. Key finding: the methodology for defining/validating red-flag detection is itself an explicitly OPEN, 🔴 Critical question in that document — OQ-03: 'What is the methodology for defining, testing, and validating the red-flag detection logic?' — blocked on BLK-03 ('Triage rubric has no clinical validation basis — cannot write acceptance criteria for triage scoring or red-flag detection'; the PRD's own remediation is to recruit a clinical advisory board before sprint planning). redFlagSymptoms below is this fleet's placeholder answer to a question the PRD says requires physician input to resolve — it exists to keep the safety-net gate meaningful until BLK-03 actually resolves, never as a stand-in for that resolution. The inline BRULE-* citations below are the real, sourced business rules (Domain 2 — Red-Flag Detection & Escalation) and are more trustworthy than the symptom list's own precision.",
+    "redFlagSymptoms": [
+      "chest pain",
+      "difficulty breathing / shortness of breath",
+      "severe uncontrolled bleeding",
+      "signs of stroke (facial droop, slurred speech, sudden one-sided weakness)",
+      "loss of consciousness or unresponsiveness",
+      "signs of severe allergic reaction / anaphylaxis",
+      "suicidal ideation or stated intent to self-harm",
+      "an emergency-level symptom for the first time mid-conversation, several turns into an otherwise routine intake — not just in the patient's first message (BRULE-010, CONFIRMED: red-flag monitoring must be continuous throughout the entire session, not only at the start or end)",
+      "an ambiguous symptom description that could plausibly, but not certainly, indicate an emergency (BRULE-014, INFERRED: thresholds must be conservative/high-sensitivity — ambiguous signals must escalate, not be suppressed)"
+    ],
+    "redFlagSymptomsNote": "BRULE-013 (tied to OPEN QUESTION OQ-03, 🔴 Critical) states detection 'must be based on a clinically validated ruleset — not solely on LLM probabilistic inference.' Worth remembering once conversation-api has a real implementation to test: a check that only inspects the LLM's response text for escalation language would not actually verify BRULE-013 — a rule-based/deterministic detection layer is implied as a requirement, not just a nice-to-have.",
+    "triageRubric": {
+      "tiers": [
+        "routine",
+        "urgent",
+        "emergency"
+      ],
+      "rationaleRequired": true,
+      "note": "Three tiers only, by explicit product scope — not a full clinical acuity scale. Every assigned tier must carry a visible, rubric-referenced rationale. Framed everywhere as decision support for the clinician, never a diagnosis; the clinician always makes the final call. CONFIRMED as genuinely unresolved, not just cautious framing: US-018 ('Three-tier triage score with rubric-referenced rationale', EPIC-004) is itself marked BLOCKED in the real backlog, pending BLK-03 (no clinical validation basis for the rubric) and BLK-01 (FDA SaMD classification undetermined)."
+    },
+    "decisionSupportRequirements": [
+      "the assigned triage tier is always displayed together with its rubric-referenced rationale — never the tier alone, with no exception for the routine tier",
+      "the UI/copy presents the tier as a suggestion for clinician review (e.g. 'suggested urgency', 'recommended for review') — never as a diagnosis, a directive, or a decision already made",
+      "the clinician can open the full structured note (chief complaint, HPI, relevant history, flagged concerns) from the same view as the tier, so the basis for the recommendation is always independently reviewable and not just a number",
+      "a session where the Escalate-Now flag has triggered is automatically assigned the Emergency triage tier (BRULE-015)",
+      "when the triage scoring engine cannot produce a confident score, or is unavailable entirely, the patient defaults to the Urgent tier — Routine is never assigned on uncertainty or failure — and a clinician review flag is raised (US-018 AC-018.ALT.1 / AC-018.EX.1, CONFIRMED-but-provisional pending BLK-01/BLK-03 like the rest of US-018)",
+      "the clinician can override the AI-assigned triage tier at any time from the queue dashboard or the note drill-down (BRULE-040/BRULE-041, CONFIRMED: the AI must never prevent, block, or override the clinician's own clinical judgment); once overridden, both the original AI-assigned score and the clinician's override are shown — the original is never hidden or removed (US-019 AC-019.ALT.2)",
+      "when a clinician overrides a triage tier, the queue re-sorts immediately to reflect the new tier (BRULE-042, INFERRED)"
+    ]
+  },
+  "dataSecurity": {
+    "_comment": "Product-specific, like clinicalSafety — NOT a generic AGENT-TEMPLATE concept. tenantIsolationRequirements sourced from the PRD's multi-tenancy requirement (NFR-011 / DE-017), reconciled 2026-09-17. patientRecordMatchingRequirements sourced from a real testability-review finding on VAN-29 (2026-09-17, see the QA comment posted on that ticket) — flagged during the actual pipeline's first live run against Jira, not inferred ahead of time.",
+    "tenantIsolationRequirements": [
+      "a clinician authenticated for one clinic cannot view another clinic's patient queue, by any navigation path",
+      "a clinician cannot open another clinic's structured note by direct URL/ID manipulation, even with an otherwise-valid session",
+      "a patient intake session is scoped to the clinic its kiosk/pre-visit link belongs to, and never appears in another clinic's queue or reporting"
+    ],
+    "patientRecordMatchingRequirements": [
+      "a patient logging in with an MR number or registered phone number is matched to their own record via an exact identifier match — never a fuzzy or partial match that could resolve to a different patient",
+      "a login attempt with an MR number or phone number that doesn't exactly match any existing patient record is rejected outright, never silently matched to the nearest similar record",
+      "two patients with plausibly similar identifiers (e.g. typo-adjacent phone numbers, similar MR numbers) never have their intake data merged or cross-attached to the wrong record"
+    ],
+    "patientRecordMatchingRequirementsNote": "This is the patient-level version of the same principle tenantIsolationRequirements applies at the clinic level — 'these two different people's data must never cross.' Unlike a generic login bug, a bad match here directly causes a clinical-safety incident (one patient's triage/symptom data attaching to another patient's chart), not just an access-control failure — that's why it's gated the same way as tenant-isolation rather than left as an ordinary testability note. CROSS-CHECKED 2026-09-17 against the real PRD (Domain 4 — Patient Identity & Returning Patient Context): the three requirements above are this fleet's own restatement of BRULE-030 (must match against the roster via a defined methodology, CONFIRMED) and BRULE-031 (below-threshold match must fall back to new-patient mode and must NOT surface any prior history, CONFIRMED) — both align with what's already listed. What's still genuinely unresolved on the PRD side, not just this fleet's own gap: the actual confidence threshold for a match is undefined (OQ-11 — 'How is a returning patient identified, and what is the fallback if recognition fails?', owned by Engineering + Clinical SME). Also scope-relevant: BRULE-033 (CONFIRMED) limits returning-patient context surfaced after a successful match to allergies, chronic conditions, and medications only — no other data categories without explicit scope confirmation — worth remembering when writing the matching scenarios' expected-result data, not just the match/no-match boundary itself.",
+    "unmodeledPersonaGap": "Domain 6 (Permissions & Authentication) defines a front-desk staff role (BRULE-053, INFERRED: may view intake completion status and manage pre-visit links, but must NOT access clinical notes or triage scores) that has no corresponding testSurface, story, or riskGatedCategory anywhere in this config yet — no US-0XX exists for it as of 2026-09-17. Not fabricating a testSurfaces entry or access-control test for this ahead of a real story; flagging it here so it isn't silently missed once EPIC-006 (currently zero child stories) or a future auth story defines it."
+  },
+  "sdlcIntegration": {
+    "manifestSchemaVersion": "1.0",
+    "handoffDir": "docs/sdlc-handoff",
+    "inputManifestGlob": "docs/sdlc-handoff/*.qa-input.json",
+    "outputManifestPattern": "docs/sdlc-handoff/{storyKey}.qa-output.json",
+    "ciGatePattern": "docs/sdlc-handoff/{storyKey}.ci-gate.json",
+    "requirementsSourcePreference": [
+      "jira-story",
+      "confluence-page",
+      "execution-plan-md"
+    ],
+    "requirementsSourcePreferenceNote": "Jira-story first, and in practice usually the only source: the BA agent for this project (Rovo) is standalone, not a Foundry-style session, and dev takes just a ticket ID as input with no execution-plan artifact and no confirmed PR/build-gate signal. jira-confluence-to-xray-csv-agent.md and qa-pipeline-conductor.agent.md must both be able to run a full design->import->automate->execute->report pipeline off a bare Jira ticket ID alone — a repo, a PR, and an execution plan are optional enrichments, never prerequisites.",
+    "note": "See INTEGRATION.md for the full manifest schema and §6 for how this project's BA/dev model differs from the Foundry-based one this contract was originally written against."
+  }
+}
